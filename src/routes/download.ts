@@ -1,12 +1,20 @@
 import express from 'express';
+import { fetch } from 'undici';
 import { loadCookies } from '../utils/cookieStore';
 import { getDownloadUrl } from '../services/quarkFiles';
 import { downloadFile } from '../services/quarkDownload';
+import { buildDownloadHeaders, dispatcher } from '../utils/quarkApi';
 
 const router = express.Router();
 
 /**
- * 下载文件（SSE 进度推送）
+ * 下载文件
+ *
+ * 两种模式：
+ *  - 默认：SSE 推送进度，文件写入 sidecar 本地 downloads/（或 save_path）
+ *  - ?inline=1：直接把文件字节回吐给调用方，不落盘
+ *    —— 供程序化读取云端 JSON / 快照（SaveSync 的 quark_bridge 使用），
+ *       避免依赖 sidecar 本地文件路径，Phase 1b 去 sidecar 后契约仍成立
  */
 router.get('/:fileId', async (req, res) => {
   const cookieData = loadCookies();
@@ -24,6 +32,24 @@ router.get('/:fileId', async (req, res) => {
   try {
     // 获取下载链接
     const downloadInfo = await getDownloadUrl(cookieData.cookies, fileId);
+
+    // inline 模式：直接回吐文件字节
+    if (req.query.inline === '1' || req.query.inline === 'true') {
+      const remote = await fetch(downloadInfo.download_url, {
+        headers: buildDownloadHeaders(cookieData.cookies),
+        dispatcher,
+      });
+      if (!remote.ok) {
+        throw new Error(`下载请求失败: ${remote.status}`);
+      }
+      const buf = Buffer.from(await remote.arrayBuffer());
+      res.writeHead(200, {
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': String(buf.length),
+        'X-File-Name': encodeURIComponent(downloadInfo.file_name || ''),
+      });
+      return res.end(buf);
+    }
 
     // 设置 SSE header
     res.writeHead(200, {

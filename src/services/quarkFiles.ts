@@ -194,7 +194,9 @@ export async function getDownloadUrl(
     method: 'POST',
     cookies,
     body: {
-      fid: fileId,
+      // 夸克 /file/download 要求 fids 数组；传单数 fid 会返回
+      // code=14001 "Bad Parameter: [fids is empty!]"
+      fids: [fileId],
     },
     params: {
       pr: 'ucpro',
@@ -207,10 +209,17 @@ export async function getDownloadUrl(
     throw new Error(`获取下载链接失败: ${res.message}`);
   }
 
+  // 该接口的 data 是数组（每项对应一个 fid），不是对象
+  const item = (Array.isArray(res.data) ? res.data[0] : res.data) || {};
+  const downloadUrl = item.download_url || '';
+  if (!downloadUrl) {
+    throw new Error('获取下载链接失败: 响应中缺少 download_url');
+  }
+
   return {
-    download_url: res.data?.download_url || '',
-    file_name: res.data?.file_name || '',
-    size: res.data?.size || 0,
+    download_url: downloadUrl,
+    file_name: item.file_name || '',
+    size: item.size || 0,
   };
 }
 

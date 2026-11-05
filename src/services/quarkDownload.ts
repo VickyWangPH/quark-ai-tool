@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { buildQuarkHeaders, dispatcher } from '../utils/quarkApi';
+import { buildDownloadHeaders, dispatcher } from '../utils/quarkApi';
 import { fetch } from 'undici';
 
 const DOWNLOAD_DIR = path.join(__dirname, '..', '..', 'downloads');
@@ -36,7 +36,7 @@ export async function downloadFile(
   let downloadedBytes = 0;
 
   const response = await fetch(downloadUrl, {
-    headers: buildQuarkHeaders(cookies),
+    headers: buildDownloadHeaders(cookies),
     dispatcher,
   });
 

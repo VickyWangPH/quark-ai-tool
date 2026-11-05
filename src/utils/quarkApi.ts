@@ -90,4 +90,18 @@ export function buildQuarkHeaders(cookies: string): Record<string, string> {
   };
 }
 
+/**
+ * OSS 直链下载专用请求头。
+ * 夸克下载直链（dl-*.pds.quark.cn）的签名只包含 UA / Referer / Cookie，
+ * 额外携带 Content-Type、Accept、Accept-Language 会导致
+ * 403 SignatureDoesNotMatch。切勿复用 buildQuarkHeaders。
+ */
+export function buildDownloadHeaders(cookies: string): Record<string, string> {
+  return {
+    'User-Agent': QUARK_PC_UA,
+    Referer: 'https://pan.quark.cn/',
+    Cookie: cookies,
+  };
+}
+
 export { QUARK_HEADERS, dispatcher };
