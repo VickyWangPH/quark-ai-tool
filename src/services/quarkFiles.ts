@@ -164,7 +164,11 @@ export async function moveFiles(
     method: 'POST',
     cookies,
     body: {
-      fid_list: fileIds,
+      // 夸克 /file/move 只认 filelist；传 fid_list 会返回
+      // 14001 "current_dir_fid,filelist 不能同时为空"。
+      // 另：current_dir_fid 是「整个源目录移动」模式，与 filelist
+      // 不能同时有值，且会误移动源目录下全部文件，故此处不使用。
+      filelist: fileIds,
       to_pdir_fid: targetParentId,
     },
     params: {
